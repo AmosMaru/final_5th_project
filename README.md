@@ -7,105 +7,229 @@ A precision agriculture system that detects weeds and crops in real time using a
 - **Amos Maru**
 - **Paul**
 
----
 
-## Project Overview
+## Literature Review
 
-This project combines computer vision and embedded hardware to automate weed detection in agricultural fields. A trained YOLOv8 model processes a live camera feed and classifies detected plants as either **crop** or **weed**. The result is communicated to an ESP32 microcontroller which blinks an LED:
+### The 4 Principles of Computer Vision
 
-- **Red LED** — Weed detected (3 blinks)
-- **Green LED** — Crop detected (2 blinks)
+Computer vision is the field of artificial intelligence that enables machines to interpret and understand visual information from the world. This project applies all four core principles:
 
----
+**1. Image Acquisition**
+The process of capturing visual data from the real world using a camera or sensor. In this project, raw images of bean crops and weeds were captured in the field using a phone camera, and live frames are captured during real-time detection using a webcam.
 
-## System Components
+**2. Image Processing**
+Cleaning and preparing the image for analysis — including resizing, normalization, noise removal, and augmentation. In this project, Roboflow handled image transformation and augmentation (flips, brightness adjustments, blur) before training, and YOLOv8 applies preprocessing (resize to 640×640, normalization) during inference.
 
-### 1. Machine Learning Model
-- **Model**: YOLOv8 Segmentation (`best.pt`)
-- **Framework**: Ultralytics YOLOv8
-- **Backend**: PyTorch
-- **Classes**:
-  - `0` — Crop (Bean plants) — shown in Green
-  - `1` — Weed — shown in Red
-- **Input resolution**: 640×640
-- **Training**: 100 epochs, batch size 16, Adam optimizer
+**3. Feature Extraction**
+Identifying meaningful patterns, edges, shapes, and textures in the image. In this project, each image was manually annotated on Roboflow by drawing polygon masks around individual plants — tracing the exact leaf shape, boundary, and structure. This taught the model what visual features separate a crop from a weed, such as leaf shape, size, and growth pattern.
 
-### 2. ESP32 LED Hardware
-- **Microcontroller**: ESP32 DevKit (38-pin)
-- **Red LED**: GPIO2 → signals weed detection
-- **Green LED**: GPIO4 → signals crop detection
-- **Communication**: USB Serial at 9600 baud
-- **Commands**: `W` = weed, `C` = crop
+**4. Interpretation and Decision Making**
+Using the extracted features to understand what is in the image and take action. In this project, the model classifies each detected plant as either crop (class 0) or weed (class 1), and the result triggers a physical response — blinking the red or green LED on the ESP32.
 
-### 3. Camera Script (`run_camera.py`)
-- Opens a live webcam feed
-- Runs YOLOv8 inference on each frame
-- Draws segmentation masks and bounding boxes
-- Sends serial commands to ESP32 based on detections
-- Controls: `q` quit, `s` screenshot, `c` toggle confidence, `+/-` threshold
 
----
+## Step 1 — Data Collection
 
-## ESP32 Wiring
+Raw images were collected in the field — photographs of **bean crops** and **weeds** taken at close range using a phone camera.
 
-| Component | Hole 1 | Hole 2 |
-|-----------|--------|--------|
-| Wire (GPIO2 signal) | a5 | h30 |
-| Red LED Resistor | i30 | i32 |
-| Red LED (+) | h32 | — |
-| Red LED (−) | h34 | — |
-| Wire (Red GND) | j34 | a13 |
-| Wire (GPIO4 signal) | a7 | h36 |
-| Green LED Resistor | i36 | i38 |
-| Green LED (+) | h38 | — |
-| Green LED (−) | h40 | — |
-| Wire (Green GND) | j40 | a19 |
+Images were organized into two folders:
 
-ESP32 placement: left pins at column **b**, right pins at column **i**, rows 1–19.
+```
+raw images/
+├── beans/     → 118 raw crop images (image_001.jpeg ... image_118.jpeg)
+└── weed1/     →  27 raw weed images (image_002.jpeg ... image_412.jpeg)
+```
 
----
+Sample raw crop image:
+
+![Raw crop](raw%20images/beans/image_001.jpeg)
+
+Sample raw weed image:
+
+![Raw weed](raw%20images/weed1/image_002.jpeg)
+
+
+## Step 2 — Annotation using Roboflow
+
+Each image was uploaded to **Roboflow** and annotated **one image at a time** by drawing polygon masks around each plant.
+
+### Annotation Process
+
+1. Upload image to Roboflow project
+2. Select the **Polygon tool**
+3. Carefully trace around each plant — crop or weed
+4. Assign the correct class label: `crop` or `weed`
+5. Save and move to the next image
+6. Repeat for every single image in the dataset
+
+### Classes defined
+
+| Class ID | Name | Description |
+|----------|------|-------------|
+| 0 | crop | Bean plants |
+| 1 | weed | Unwanted plants |
+
+The annotation produces a **segmentation mask** for each plant — not just a bounding box — so the model learns the exact shape of each plant.
+
+### Roboflow Annotation Screenshot
+
+> Annotation was done on the Roboflow platform. Each image was opened, polygons were drawn around each plant, and a class label was assigned before moving to the next image.
+
+![Roboflow detection result](Screenshot%202026-04-06%20at%2011.19.33.png)
+
+
+## Step 3 — Image Transformation and Augmentation
+
+After annotation, Roboflow applied **automatic augmentations** to increase dataset size and improve model robustness:
+
+- Brightness and contrast adjustments
+- Blur and noise
+
+The exported dataset follows YOLO format:
+
+```
+traning images/
+├── crops/
+│   └── train/    → Augmented crop images + labels (.jpeg + .json)
+└── weed/
+    └── train/    → Augmented weed images + labels (.jpeg + .json)
+```
+
+Each exported image filename contains a Roboflow hash (e.g. `image_001_jpeg.rf.PvwTUI0HOwIUGEy9ewWd.jpeg`) confirming it passed through Roboflow's transformation pipeline.
+
+### Sample Training Batch (Early Epoch)
+
+![Training batch early](model_results/weed_segmentation/train_batch0.jpg)
+
+### Sample Training Batch (Late Epoch)
+
+![Training batch late](model_results/weed_segmentation/train_batch2252.jpg)
+
+
+## Step 4 — Training on Google Colab
+
+The model was trained on **Google Colab** using a GPU runtime.
+
+### Notebook
+
+File: `weed_segmentation_yolov8 (3).ipynb`
+
+### Training Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| Model | YOLOv8n-seg (nano segmentation) |
+| Epochs | 100 |
+| Batch size | 16 |
+| Image size | 640×640 |
+| Optimizer | Adam |
+| Learning rate | Auto (cosine decay) |
+| Device | GPU (Google Colab) |
+
+### Training Steps in Colab
+
+1. Mount Google Drive
+2. Install Ultralytics: `pip install ultralytics`
+3. Load dataset from Drive in YOLO format
+4. Train:
+```python
+from ultralytics import YOLO
+model = YOLO("yolov8n-seg.pt")
+model.train(data="dataset.yaml", epochs=100, imgsz=640, batch=16)
+```
+5. Export best weights (`best.pt`) back to Drive
+6. Download to local machine
+
+
+### Validation — Ground Truth vs Predictions
+
+**Ground Truth:**
+
+![Val labels](model_results/weed_segmentation/val_batch0_labels.jpg)
+
+**Model Predictions:**
+
+![Val predictions](model_results/weed_segmentation/val_batch0_pred.jpg)
+
+
+## Step 5 — Real-Time Detection (`run_camera.py`)
+
+The trained `best.pt` model runs on a live webcam feed and detects crops and weeds in real time.
+
+```bash
+python run_camera.py
+```
+
+- Green overlay = Crop detected
+- Red overlay = Weed detected
+- Press `q` to quit, `s` to save screenshot
+
+
+## Step 6 — ESP32 Hardware LED Signal
+
+When the model detects a plant, it sends a serial command to the **ESP32** which blinks an LED:
+
+| Detection | Serial Command | LED | Blinks |
+|-----------|---------------|-----|--------|
+| Weed | `W` | Red LED (GPIO2) | 3 times |
+| Crop | `C` | Green LED (GPIO4) | 2 times |
+
+### ESP32 Wiring
+
+```
+ESP32 placement: left pins column b, right pins column i, rows 1–19
+
+GPIO2 (b5) → wire a5 → h30 → Resistor i30–i32 → Red LED h32(+) h34(−) → wire j34 → GND a13
+GPIO4 (b7) → wire a7 → h36 → Resistor i36–i38 → Green LED h38(+) h40(−) → wire j40 → GND a19
+```
+
+### Arduino Code
+
+File: `esp32_led_blink/esp32_led_blink.ino`
+
+```cpp
+#define RED_LED   2
+#define GREEN_LED 4
+
+// W received → Red LED blinks 3x  (Weed)
+// C received → Green LED blinks 2x (Crop)
+```
+
+
+## Test Images
+
+The `test image/` folder contains sample images to test the model:
+
+```
+test image/
+├── crop_01.jpeg – crop_05.jpeg   (5 crop samples)
+└── weed_01.jpg  – weed_05.jpeg  (5 weed samples)
+```
+
 
 ## Project Structure
 
 ```
 final_5th_project/
-├── run_camera.py                  # Main script — camera + model + ESP32
+├── run_camera.py
 ├── esp32_led_blink/
-│   └── esp32_led_blink.ino        # Arduino code for ESP32
+│   └── esp32_led_blink.ino
 ├── model_results/
 │   └── weed_segmentation/
-│       └── weights/
-│           ├── best.pt            # Trained model weights
-│           └── best.onnx
-├── test image/                    # Test images for the model
-│   ├── crop_01.jpeg – crop_05.jpeg   # 5 crop samples
-│   └── weed_01.jpg  – weed_05.jpeg  # 5 weed samples
-├── traning images/                # Original training data
-├── raw images/                    # Raw collected images
-├── screenshots/                   # Saved detection screenshots
-└── README.md
+│       ├── best.pt
+│       ├── results.png
+│       ├── confusion_matrix_normalized.png
+│       └── ...
+├── raw images/
+│   ├── beans/
+│   └── weed1/
+├── traning images/
+│   ├── crops/
+│   └── weed/
+├── test image/
+├── screenshots/
+└── weed_segmentation_yolov8 (3).ipynb
 ```
 
----
-
-## How to Run
-
-### Step 1 — Upload ESP32 code
-1. Open `esp32_led_blink/esp32_led_blink.ino` in Arduino IDE
-2. Select **Tools → Board → ESP32 Dev Module**
-3. Select **Tools → Port → /dev/cu.usbserial-10**
-4. Click Upload
-5. **Close Serial Monitor** after uploading
-
-### Step 2 — Run the detection script
-```bash
-python run_camera.py
-```
-
-### Step 3 — Test with images
-Point the camera at images from `test_images/` to test detections without a live plant.
-
----
 
 ## Dependencies
 
@@ -113,23 +237,7 @@ Point the camera at images from `test_images/` to test detections without a live
 pip install ultralytics opencv-python pyserial numpy
 ```
 
-- Python ≥ 3.8
-- PyTorch
-- Ultralytics YOLOv8
-- OpenCV
-- pyserial
-
----
-
-## Dataset
-
-- **Classes**: Crop (Bean), Weed
-- **Format**: YOLO annotation style
-- **Source**: Roboflow annotated dataset
-- **Split**: Train / Val / Test
-
----
 
 ## License
 
-This project is open-sourced under the MIT License.
+MIT License
