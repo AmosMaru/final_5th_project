@@ -158,10 +158,6 @@ python run_camera.py
 - Red overlay = Weed detected
 - Press `q` to quit, `s` to save screenshot
 
-### Live Detection Screenshot
-
-![Detection](screenshots/weed_detect_20260425_171329.jpg)
-
 
 ## Step 6 — ESP32 Hardware LED Signal
 
