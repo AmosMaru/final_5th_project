@@ -1,6 +1,6 @@
-# Weed Detection System — YOLOv8 + ESP32 LED Indicator
+# Weed Detection System — ESP32 LED Indicator
 
-A precision agriculture system that detects weeds and crops in real time using a YOLOv8 segmentation model and signals the result via an ESP32-controlled LED system.
+A precision agriculture system that detects weeds and crops in real time using a deep learning segmentation model and signals the result via an ESP32-controlled LED system.
 
 ## Authors
 
@@ -18,7 +18,7 @@ Computer vision is the field of artificial intelligence that enables machines to
 The process of capturing visual data from the real world using a camera or sensor. In this project, raw images of bean crops and weeds were captured in the field using a phone camera, and live frames are captured during real-time detection using a webcam.
 
 **2. Image Processing**
-Cleaning and preparing the image for analysis — including resizing, normalization, noise removal, and augmentation. In this project, Roboflow handled image transformation and augmentation (flips, brightness adjustments, blur) before training, and YOLOv8 applies preprocessing (resize to 640×640, normalization) during inference.
+Cleaning and preparing the image for analysis — including resizing, normalization, noise removal, and augmentation. In this project, Roboflow handled image transformation and augmentation (flips, brightness adjustments, blur) before training, and the model applies preprocessing (resize to 640×640, normalization) during inference.
 
 **3. Feature Extraction**
 Identifying meaningful patterns, edges, shapes, and textures in the image. In this project, each image was manually annotated on Roboflow by drawing polygon masks around individual plants — tracing the exact leaf shape, boundary, and structure. This taught the model what visual features separate a crop from a weed, such as leaf shape, size, and growth pattern.
@@ -84,7 +84,7 @@ After annotation, Roboflow applied **automatic augmentations** to increase datas
 - Brightness and contrast adjustments
 - Blur and noise
 
-The exported dataset follows YOLO format:
+The exported dataset follows a standard object detection format:
 
 ```
 traning images/
@@ -117,7 +117,7 @@ File: `weed_segmentation_yolov8 (3).ipynb`
 
 | Parameter | Value |
 |-----------|-------|
-| Model | YOLOv8n-seg (nano segmentation) |
+| Model | Nano segmentation model |
 | Epochs | 100 |
 | Batch size | 16 |
 | Image size | 640×640 |
@@ -128,14 +128,9 @@ File: `weed_segmentation_yolov8 (3).ipynb`
 ### Training Steps in Colab
 
 1. Mount Google Drive
-2. Install Ultralytics: `pip install ultralytics`
-3. Load dataset from Drive in YOLO format
-4. Train:
-```python
-from ultralytics import YOLO
-model = YOLO("yolov8n-seg.pt")
-model.train(data="dataset.yaml", epochs=100, imgsz=640, batch=16)
-```
+2. Install required libraries
+3. Load dataset from Drive
+4. Train the segmentation model
 5. Export best weights (`best.pt`) back to Drive
 6. Download to local machine
 
@@ -162,6 +157,10 @@ python run_camera.py
 - Green overlay = Crop detected
 - Red overlay = Weed detected
 - Press `q` to quit, `s` to save screenshot
+
+### Live Detection Screenshot
+
+![Detection](screenshots/weed_detect_20260425_171329.jpg)
 
 
 ## Step 6 — ESP32 Hardware LED Signal
