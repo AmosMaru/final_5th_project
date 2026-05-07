@@ -1,0 +1,9 @@
+# Weed Detection Dataset
+path: /content/drive/MyDrive/model_results/dataset  # absolute path to dataset root
+train: images/train  # train images (relative to 'path')
+val: images/train  # val images (using same as train for now)
+
+# Classes
+names:
+  0: crop
+  1: weed
