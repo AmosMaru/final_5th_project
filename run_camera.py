@@ -42,7 +42,7 @@ SCREENSHOT_DIR = Path(__file__).parent / "screenshots"
 
 # ── ESP32 Serial Configuration ────────────────────────────────────────────────
 # Run `ls /dev/cu.*` to find your ESP32 port after plugging it in via USB
-ESP32_PORT = "/dev/cu.usbserial-10"     # <-- CHANGE THIS to your port
+ESP32_PORT = "/dev/cu.usbserial-110"     # <-- CHANGE THIS to your port
 ESP32_BAUD  = 9600
 LED_SIGNAL_INTERVAL = 1.0               # seconds between LED signals (avoid flooding)
 
