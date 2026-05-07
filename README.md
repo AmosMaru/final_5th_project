@@ -1,113 +1,135 @@
-# Weed Detection using YOLOv8
+# Weed Detection System — YOLOv8 + ESP32 LED Indicator
 
-This repository contains a Jupyter Notebook demonstrating the use of the **YOLOv8 object detection model** to identify and classify *weed* and *crop* instances from agricultural field images. The goal is to leverage deep learning for precision agriculture by automating weed detection, which can lead to more targeted herbicide use and improved crop yields.
+A precision agriculture system that detects weeds and crops in real time using a YOLOv8 segmentation model and signals the result via an ESP32-controlled LED system.
 
-## 🧠 Model & Framework
+## Authors
 
-- **Model**: YOLOv8 (via SuperGradients)
-- **Framework**: SuperGradients Training Library
+- **Amos Maru**
+- **Paul**
+
+---
+
+## Project Overview
+
+This project combines computer vision and embedded hardware to automate weed detection in agricultural fields. A trained YOLOv8 model processes a live camera feed and classifies detected plants as either **crop** or **weed**. The result is communicated to an ESP32 microcontroller which blinks an LED:
+
+- **Red LED** — Weed detected (3 blinks)
+- **Green LED** — Crop detected (2 blinks)
+
+---
+
+## System Components
+
+### 1. Machine Learning Model
+- **Model**: YOLOv8 Segmentation (`best.pt`)
+- **Framework**: Ultralytics YOLOv8
 - **Backend**: PyTorch
-- **Data Format**: YOLO annotation style (bounding boxes + labels)
+- **Classes**:
+  - `0` — Crop (Bean plants) — shown in Green
+  - `1` — Weed — shown in Red
+- **Input resolution**: 640×640
+- **Training**: 100 epochs, batch size 16, Adam optimizer
 
-## 📁 Dataset
+### 2. ESP32 LED Hardware
+- **Microcontroller**: ESP32 DevKit (38-pin)
+- **Red LED**: GPIO2 → signals weed detection
+- **Green LED**: GPIO4 → signals crop detection
+- **Communication**: USB Serial at 9600 baud
+- **Commands**: `W` = weed, `C` = crop
 
-The notebook utilizes a weed detection dataset, which should be placed in the `dataset/` directory at the project root, with the following structure:
+### 3. Camera Script (`run_camera.py`)
+- Opens a live webcam feed
+- Runs YOLOv8 inference on each frame
+- Draws segmentation masks and bounding boxes
+- Sends serial commands to ESP32 based on detections
+- Controls: `q` quit, `s` screenshot, `c` toggle confidence, `+/-` threshold
 
-```
-Weed Detection/
-├── images/
-│   ├── train/
-│   ├── val/
-│   └── test/
-├── labels/
-│   ├── train/
-│   ├── val/
-│   └── test/
-```
+---
 
-Each image has a corresponding YOLO-formatted label file. The dataset consists of two classes:
-- `crop`
-- `weed`
+## ESP32 Wiring
 
-## 🔧 Project Workflow
+| Component | Hole 1 | Hole 2 |
+|-----------|--------|--------|
+| Wire (GPIO2 signal) | a5 | h30 |
+| Red LED Resistor | i30 | i32 |
+| Red LED (+) | h32 | — |
+| Red LED (−) | h34 | — |
+| Wire (Red GND) | j34 | a13 |
+| Wire (GPIO4 signal) | a7 | h36 |
+| Green LED Resistor | i36 | i38 |
+| Green LED (+) | h38 | — |
+| Green LED (−) | h40 | — |
+| Wire (Green GND) | j40 | a19 |
 
-1. **Environment Setup**
-   - Uses Kaggle environment with common libraries pre-installed
-   - Installs `super-gradients` library for training
+ESP32 placement: left pins at column **b**, right pins at column **i**, rows 1–19.
 
-2. **Dataset Preparation**
-   - Loads the YOLO-formatted dataset and organizes it into `train`, `val`, and `test` sets
-   - Sets dataset paths and class names
+---
 
-3. **Model Definition**
-   - Loads the `YOLOv8 and YOLO-NAS` model from SuperGradients
-   - Applies YOLO-specific loss and evaluation metrics (e.g., mAP@0.5, mAP@0.5:0.95)
-
-4. **Training Configuration**
-   - Defines the following training parameters:
-     - **Epochs**: 100
-     - **Batch size**: 16
-     - **Optimizer**: Adam with weight decay
-     - **Learning rate**: 5e-4 with cosine decay
-     - **Mixed precision training**: Enabled
-     - **EMA (Exponential Moving Average)**: Enabled
-
-   - Trains the model using SuperGradients' `Trainer` module
-
-5. **Evaluation & Visualization**
-   - Evaluates the best saved model on the test set
-   - Visualizes ground truth and prediction overlaps
-
-## 📊 Evaluation Metrics
-
-- **mAP@0.5**: Measures precision across object confidence thresholds
-- **mAP@0.5:0.95**: A more rigorous evaluation averaging over multiple IoU thresholds
-
-## 🖼️ Visualizations
-
-The notebook includes visualization examples for:
-- Ground truth bounding boxes
-- Predicted detections after training
-- Model performance comparison
-
-## 🚀 How to Run
-
-You can run the notebook on [Kaggle Notebooks](https://www.kaggle.com/) or in a local Jupyter environment with GPU support. Ensure you have the following installed:
-
-```bash
-pip install super-gradients
-```
-
-Make sure to place the dataset in the expected directory structure before running the notebook.
-
-## 📌 Dependencies
-
-- Python ≥ 3.8
-- torch
-- numpy
-- pandas
-- matplotlib
-- opencv-python
-- super-gradients
-- tqdm
-
-## 📂 File Structure
+## Project Structure
 
 ```
-.
-├── weed-detection-using-yolo-v8.ipynb
-├── README.md
-└── data-set.zip/
-    └── Weed Detection/
+final_5th_project/
+├── run_camera.py                  # Main script — camera + model + ESP32
+├── esp32_led_blink/
+│   └── esp32_led_blink.ino        # Arduino code for ESP32
+├── model_results/
+│   └── weed_segmentation/
+│       └── weights/
+│           ├── best.pt            # Trained model weights
+│           └── best.onnx
+├── test_images/                   # Test images for the model
+│   ├── crop_01.jpeg – crop_10.jpeg   # 10 crop samples
+│   └── weed_01.jpg  – weed_10.jpeg  # 10 weed samples
+├── traning images/                # Original training data
+├── raw images/                    # Raw collected images
+├── screenshots/                   # Saved detection screenshots
+└── README.md
 ```
 
 ---
 
-## 📄 License
+## How to Run
+
+### Step 1 — Upload ESP32 code
+1. Open `esp32_led_blink/esp32_led_blink.ino` in Arduino IDE
+2. Select **Tools → Board → ESP32 Dev Module**
+3. Select **Tools → Port → /dev/cu.usbserial-10**
+4. Click Upload
+5. **Close Serial Monitor** after uploading
+
+### Step 2 — Run the detection script
+```bash
+python run_camera.py
+```
+
+### Step 3 — Test with images
+Point the camera at images from `test_images/` to test detections without a live plant.
+
+---
+
+## Dependencies
+
+```bash
+pip install ultralytics opencv-python pyserial numpy
+```
+
+- Python ≥ 3.8
+- PyTorch
+- Ultralytics YOLOv8
+- OpenCV
+- pyserial
+
+---
+
+## Dataset
+
+- **Classes**: Crop (Bean), Weed
+- **Format**: YOLO annotation style
+- **Source**: Roboflow annotated dataset
+- **Split**: Train / Val / Test
+
+---
+
+## License
 
 This project is open-sourced under the MIT License.
-
-## 🔗 Actual Implementation is on Kaggle:
-
-- 📓 Kaggle Notebook: [Weed Detection using YOLOv8](https://www.kaggle.com/code/samrocks03/weed-detection-using-yolo-v8)
-- 📂 Kaggle Dataset: [Weed Detection Dataset](https://www.kaggle.com/datasets/samrocks03/weed-detection/)
