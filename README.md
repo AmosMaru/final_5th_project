@@ -77,9 +77,9 @@ final_5th_project/
 │       └── weights/
 │           ├── best.pt            # Trained model weights
 │           └── best.onnx
-├── test_images/                   # Test images for the model
-│   ├── crop_01.jpeg – crop_10.jpeg   # 10 crop samples
-│   └── weed_01.jpg  – weed_10.jpeg  # 10 weed samples
+├── test image/                    # Test images for the model
+│   ├── crop_01.jpeg – crop_05.jpeg   # 5 crop samples
+│   └── weed_01.jpg  – weed_05.jpeg  # 5 weed samples
 ├── traning images/                # Original training data
 ├── raw images/                    # Raw collected images
 ├── screenshots/                   # Saved detection screenshots
