@@ -1,0 +1,6 @@
+── crop_weed_soil_seg ──
+Box  mAP50    : 0.9907
+Box  mAP50-95 : 0.9444
+Seg  mAP50    : 0.9801
+Seg  mAP50-95 : 0.9066
+

@@ -1,0 +1,10 @@
+# Crop-Weed-Soil Segmentation Dataset
+path: /content/drive/MyDrive/new_model_results/dataset   # absolute path to dataset root
+train: images/train
+val:   images/train   # small dataset — replace with a separate val split when available
+
+nc: 3
+names:
+  0: crop
+  1: weed
+  2: soil
